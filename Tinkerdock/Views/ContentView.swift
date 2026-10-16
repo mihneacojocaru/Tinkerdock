@@ -7,8 +7,9 @@ enum LibraryViewMode: String {
 
 struct ContentView: View {
     @Environment(ToolStore.self) private var store
-    @Environment(TerminalManager.self) private var terminals
     @Environment(BrowserSessions.self) private var sessions
+    @Environment(DevServerManager.self) private var devServers
+    @Environment(AppRouter.self) private var router
 
     @State private var filter: LibraryFilter? = .all
     @State private var selection: Tool.ID?
@@ -23,7 +24,7 @@ struct ContentView: View {
     @AppStorage("showTerminal") private var showTerminal = false
 
     private var openedTool: Tool? {
-        guard case .openTool(let id) = filter, let tool = store.tool(id), tool.entryURL != nil else { return nil }
+        guard case .openTool(let id) = filter, let tool = store.tool(id), tool.opensInWebView || tool.kind == .devProject else { return nil }
         return tool
     }
 
@@ -43,6 +44,9 @@ struct ContentView: View {
         .navigationSubtitle(subtitle)
         .onChange(of: filter) {
             if case .openTool(let id) = filter { selection = id }
+        }
+        .onChange(of: router.openRequest) {
+            if let id = router.openRequest?.toolID, let tool = store.tool(id) { open(tool) }
         }
         .searchable(text: $search, placement: .toolbar, prompt: "Search tools")
         .toolbar { toolbar }
@@ -75,8 +79,10 @@ struct ContentView: View {
     @ViewBuilder
     private var mainPane: some View {
         if let tool = openedTool {
-            ToolBrowserView(tool: tool, browser: sessions.model(for: tool), showsWindowButton: true)
+            ToolPage(tool: tool)
                 .id(tool.id)
+        } else if filter == .discovered {
+            DiscoveredView { selection = $0 }
         } else {
             library
         }
@@ -84,6 +90,7 @@ struct ContentView: View {
 
     private var subtitle: String {
         if let tool = openedTool { return tool.displayLocation }
+        if filter == .discovered { return "" }
         let count = visibleTools.count
         return count == 1 ? "1 tool" : "\(count) tools"
     }
@@ -193,8 +200,9 @@ struct ContentView: View {
         case .script:
             ToolActions.runScript(tool)
         case .devProject:
-            showTerminal = true
-            terminals.run(tool.command ?? "npm run dev", in: tool)
+            if !devServers.isActive(tool.id) { devServers.start(tool) }
+            sessions.open(tool)
+            filter = .openTool(tool.id)
         }
     }
 

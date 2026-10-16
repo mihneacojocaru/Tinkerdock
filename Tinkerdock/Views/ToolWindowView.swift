@@ -29,7 +29,7 @@ struct ToolBrowserView: View {
                     if browser.isLoading {
                         ProgressView().controlSize(.small)
                     }
-                    Button(action: reload) { Label("Reload", systemImage: "arrow.clockwise") }
+                    Button { browser.reload() } label: { Label("Reload", systemImage: "arrow.clockwise") }
                         .keyboardShortcut("r")
                     if showsWindowButton {
                         Button { openWindow(id: "tool", value: tool.id) } label: { Label("Open in New Window", systemImage: "macwindow.badge.plus") }
@@ -39,11 +39,6 @@ struct ToolBrowserView: View {
             }
     }
 
-    private func reload() {
-        if let url = tool.entryURL {
-            browser.load(url, readAccess: tool.folderURL)
-        }
-    }
 }
 
 struct ToolWindowView: View {
@@ -53,9 +48,8 @@ struct ToolWindowView: View {
     @StateObject private var browser = BrowserModel()
 
     var body: some View {
-        if let tool = store.tool(toolID), let url = tool.entryURL {
-            ToolBrowserView(tool: tool, browser: browser)
-                .task(id: url) { browser.load(url, readAccess: tool.folderURL) }
+        if let tool = store.tool(toolID), tool.opensInWebView || tool.kind == .devProject {
+            ToolPage(tool: tool, browser: browser, showsWindowButton: false)
                 .navigationTitle(tool.name)
                 .navigationSubtitle(browser.pageTitle)
         } else {

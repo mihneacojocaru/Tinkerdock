@@ -3,6 +3,8 @@ import SwiftUI
 struct SidebarView: View {
     @Environment(ToolStore.self) private var store
     @Environment(BrowserSessions.self) private var sessions
+    @Environment(DiscoveryStore.self) private var discovery
+    @Environment(DevServerManager.self) private var devServers
     @Binding var selection: LibraryFilter?
 
     var body: some View {
@@ -14,6 +16,9 @@ struct SidebarView: View {
                 if count(.missing) > 0 {
                     row(.missing)
                 }
+                Label(LibraryFilter.discovered.title, systemImage: LibraryFilter.discovered.symbol)
+                    .badge(discovery.pending.count)
+                    .tag(LibraryFilter.discovered)
             }
             if !sessions.openIDs.isEmpty {
                 Section("Open") {
@@ -45,6 +50,9 @@ struct SidebarView: View {
         HStack {
             Label(tool.name, systemImage: tool.kind.symbol)
             Spacer()
+            if devServers.url(for: tool.id) != nil {
+                Circle().fill(.green).frame(width: 7, height: 7).help("Dev server running")
+            }
             Button {
                 close(tool.id)
             } label: {

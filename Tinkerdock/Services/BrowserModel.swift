@@ -9,6 +9,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published private(set) var canGoForward = false
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    private(set) var loadedURL: URL?
 
     override init() {
         webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
@@ -18,12 +19,22 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.uiDelegate = self
     }
 
-    func load(_ url: URL, readAccess: URL?) {
+    func load(_ url: URL, readAccess: URL? = nil) {
+        loadedURL = url
         errorMessage = nil
         if url.isFileURL {
             webView.loadFileURL(url, allowingReadAccessTo: readAccess ?? url.deletingLastPathComponent())
         } else {
             webView.load(URLRequest(url: url))
+        }
+    }
+
+    func reload() {
+        if webView.url != nil {
+            errorMessage = nil
+            webView.reload()
+        } else if let loadedURL {
+            load(loadedURL)
         }
     }
 

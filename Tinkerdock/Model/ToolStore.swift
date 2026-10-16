@@ -3,19 +3,12 @@ import Observation
 
 @MainActor @Observable
 final class ToolStore {
-    static let supportURL: URL = {
-        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Tinkerdock", isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
-    }()
-
     var tools: [Tool] = [] {
         didSet { scheduleSave() }
     }
 
     @ObservationIgnored private var saveTask: Task<Void, Never>?
-    private let fileURL = ToolStore.supportURL.appendingPathComponent("tools.json")
+    private let fileURL = AppPaths.tools
 
     init() {
         load()
@@ -41,6 +34,10 @@ final class ToolStore {
             }
         }
         return rejected
+    }
+
+    func tool(atLocation location: String) -> Tool? {
+        tools.first { $0.location == location }
     }
 
     func update(_ id: Tool.ID, _ change: (inout Tool) -> Void) {

@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 
 @MainActor
 enum ToolActions {
@@ -29,6 +30,28 @@ enum ToolActions {
     static func runScript(_ tool: Tool) {
         guard let path = tool.fileURL?.path else { return }
         openTerminal(for: tool, running: tool.command ?? defaultCommand(forScript: path))
+    }
+
+    static func exportZip(_ tool: Tool) {
+        guard let source = tool.fileURL else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "\(tool.name).zip"
+        panel.allowedContentTypes = [.zip]
+        panel.message = "node_modules and .git are left out."
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        try? FileManager.default.removeItem(at: destination)
+        Task {
+            let name = source.lastPathComponent
+            let result = await Shell.run("/usr/bin/zip", ["-r", "-q", destination.path, name, "-x", "*/node_modules/*", "*/.git/*", "*.DS_Store"], in: source.deletingLastPathComponent())
+            if result.status == 0 {
+                NSWorkspace.shared.activateFileViewerSelecting([destination])
+            } else {
+                let alert = NSAlert()
+                alert.messageText = "Couldn't create the ZIP file"
+                alert.informativeText = result.output
+                alert.runModal()
+            }
+        }
     }
 
     static var hasITerm: Bool {

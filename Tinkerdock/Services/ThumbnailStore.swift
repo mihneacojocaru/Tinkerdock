@@ -8,11 +8,12 @@ final class ThumbnailStore {
 
     @ObservationIgnored private var requested: Set<Tool.ID> = []
     @ObservationIgnored private var renderers: [Tool.ID: SnapshotRenderer] = [:]
-    @ObservationIgnored private let folder: URL = {
-        let url = ToolStore.supportURL.appendingPathComponent("Thumbnails", isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
-    }()
+    @ObservationIgnored private let folder = AppPaths.thumbnails
+    @ObservationIgnored private let server: ToolServer
+
+    init(server: ToolServer) {
+        self.server = server
+    }
 
     func ensure(_ tool: Tool) {
         guard !requested.contains(tool.id) else { return }
@@ -36,10 +37,20 @@ final class ThumbnailStore {
     }
 
     private func render(_ tool: Tool) {
-        guard let url = tool.entryURL, !tool.isMissing, renderers[tool.id] == nil else { return }
+        guard tool.entryURL != nil, !tool.isMissing, renderers[tool.id] == nil else { return }
         let target = file(for: tool)
         let renderer = SnapshotRenderer()
         renderers[tool.id] = renderer
+        Task {
+            guard let url = await server.pageURL(for: tool) else {
+                renderers[tool.id] = nil
+                return
+            }
+            capture(tool, url: url, with: renderer, to: target)
+        }
+    }
+
+    private func capture(_ tool: Tool, url: URL, with renderer: SnapshotRenderer, to target: URL) {
         renderer.capture(url: url, readAccess: tool.folderURL) { [weak self] image in
             guard let self else { return }
             renderers[tool.id] = nil
