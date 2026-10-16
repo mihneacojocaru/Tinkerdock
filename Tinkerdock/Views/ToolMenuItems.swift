@@ -35,8 +35,10 @@ struct ToolMenuItems: View {
         Button(tool.isFavorite ? "Remove from Favorites" : "Add to Favorites") {
             store.update(tool.id) { $0.isFavorite.toggle() }
         }
-        if tool.entryURL != nil {
-            Button("Refresh Thumbnail") { thumbnails.refresh(tool) }
+        if tool.entryURL != nil || tool.kind == .devProject {
+            Button("Reset Preview") {
+                thumbnails.reset(tool, devServerURL: devServers.url(for: tool.id))
+            }
         }
         Divider()
         Button("Remove from Tinkerdock", role: .destructive) {

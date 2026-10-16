@@ -16,6 +16,7 @@ final class DevServerManager {
 
     @ObservationIgnored private var processes: [Tool.ID: Process] = [:]
     @ObservationIgnored private var stopping: Set<Tool.ID> = []
+    @ObservationIgnored var onRunning: ((Tool.ID, URL) -> Void)?
 
     init() {
         NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: .main) { [weak self] _ in
@@ -114,6 +115,7 @@ final class DevServerManager {
         logs[id] = log
         if state(id) == .starting, let url = Self.localURL(in: clean) {
             states[id] = .running(url)
+            onRunning?(id, url)
         }
     }
 

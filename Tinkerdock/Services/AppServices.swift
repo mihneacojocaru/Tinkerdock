@@ -18,6 +18,11 @@ final class AppServices {
         sessions = BrowserSessions(server: server, devServers: devServers)
         discovery = DiscoveryStore(store: store)
         inbox = InboxWatcher(store: store, router: router)
+        devServers.onRunning = { [store, thumbnails] id, url in
+            if let tool = store.tool(id) {
+                thumbnails.captureIfMissing(tool, at: url)
+            }
+        }
     }
 }
 
