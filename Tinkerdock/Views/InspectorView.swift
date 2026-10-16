@@ -62,6 +62,7 @@ struct InspectorView: View {
             }
 
             if let folder = tool.folderURL, !tool.isMissing, tool.kind != .app {
+                AgentSection(tool: tool, folder: folder)
                 GitSection(folder: folder)
             }
 
@@ -187,6 +188,30 @@ private struct GitSection: View {
         }
         .task(id: folder) {
             info = await GitInspector.info(for: folder)
+        }
+    }
+}
+
+private struct AgentSection: View {
+    let tool: Tool
+    let folder: URL
+    @Environment(HerdrMonitor.self) private var herdr
+    @State private var errorMessage: String?
+
+    var body: some View {
+        if herdr.isAvailable && herdr.errorMessage == nil {
+            Section("Agents") {
+                ForEach(herdr.agents(in: folder)) { agent in
+                    AgentRow(agent: agent)
+                }
+                Button("Start Claude Code in herdr", systemImage: "plus.circle") {
+                    Task { errorMessage = await herdr.startClaude(in: folder, name: tool.name) }
+                }
+                .buttonStyle(.borderless)
+                if let errorMessage {
+                    Text(errorMessage).font(.caption).foregroundStyle(.red)
+                }
+            }
         }
     }
 }

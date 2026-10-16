@@ -81,6 +81,8 @@ struct ContentView: View {
         if let tool = openedTool {
             ToolPage(tool: tool)
                 .id(tool.id)
+        } else if filter == .agents {
+            AgentsView()
         } else if filter == .discovered {
             DiscoveredView { selection = $0 }
         } else {
@@ -90,7 +92,7 @@ struct ContentView: View {
 
     private var subtitle: String {
         if let tool = openedTool { return tool.displayLocation }
-        if filter == .discovered { return "" }
+        if filter == .discovered || filter == .agents { return "" }
         let count = visibleTools.count
         return count == 1 ? "1 tool" : "\(count) tools"
     }

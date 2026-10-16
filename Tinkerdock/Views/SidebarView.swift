@@ -5,6 +5,7 @@ struct SidebarView: View {
     @Environment(BrowserSessions.self) private var sessions
     @Environment(DiscoveryStore.self) private var discovery
     @Environment(DevServerManager.self) private var devServers
+    @Environment(HerdrMonitor.self) private var herdr
     @Binding var selection: LibraryFilter?
 
     var body: some View {
@@ -19,6 +20,12 @@ struct SidebarView: View {
                 Label(LibraryFilter.discovered.title, systemImage: LibraryFilter.discovered.symbol)
                     .badge(discovery.pending.count)
                     .tag(LibraryFilter.discovered)
+                if herdr.isAvailable {
+                    Label(LibraryFilter.agents.title, systemImage: LibraryFilter.agents.symbol)
+                        .badge(herdr.blockedCount)
+                        .tag(LibraryFilter.agents)
+                        .help("Agents in herdr. The number counts agents waiting for you.")
+                }
             }
             if !sessions.openIDs.isEmpty {
                 Section("Open") {

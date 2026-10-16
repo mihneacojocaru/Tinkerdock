@@ -7,6 +7,7 @@ final class AppServices {
     let server = ToolServer()
     let devServers = DevServerManager()
     let router = AppRouter()
+    let herdr = HerdrMonitor()
     let thumbnails: ThumbnailStore
     let sessions: BrowserSessions
     let discovery: DiscoveryStore
@@ -30,5 +31,6 @@ extension View {
             .environment(services.thumbnails)
             .environment(services.sessions)
             .environment(services.discovery)
+            .environment(services.herdr)
     }
 }
