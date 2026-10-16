@@ -68,7 +68,7 @@ enum ToolActions {
         }
     }
 
-    private static func runInExternalTerminal(_ line: String) {
+    static func runInExternalTerminal(_ line: String) {
         let text = appleScriptQuoted(line)
         let source = hasITerm
             ? """

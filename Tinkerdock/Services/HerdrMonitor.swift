@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Observation
 import UserNotifications
 
@@ -12,8 +12,30 @@ struct HerdrAgent: Decodable, Identifiable, Hashable {
     let focused: Bool
 
     var id: String { terminalId }
-    var kind: String { agent ?? "agent" }
+    var kind: String {
+        switch agent {
+        case "claude": "Claude Code"
+        case let name?: name.prefix(1).uppercased() + name.dropFirst()
+        case nil: "Agent"
+        }
+    }
     var folderName: String { cwd.map { ($0 as NSString).lastPathComponent } ?? paneId }
+}
+
+struct AgentEvent: Identifiable, Equatable {
+    enum Kind {
+        case finished
+        case needsInput
+    }
+
+    let id = UUID()
+    let agent: HerdrAgent
+    let kind: Kind
+    let date = Date()
+
+    var title: String {
+        kind == .finished ? "\(agent.kind) is done" : "\(agent.kind) needs you"
+    }
 }
 
 /// Polls the local herdr server for coding agents and their state.
@@ -22,6 +44,7 @@ final class HerdrMonitor {
     private(set) var agents: [HerdrAgent] = []
     private(set) var workspaceLabels: [String: String] = [:]
     private(set) var errorMessage: String?
+    private(set) var events: [AgentEvent] = []
 
     @ObservationIgnored let executable: String?
     @ObservationIgnored private var previousStatus: [String: String] = [:]
@@ -67,8 +90,38 @@ final class HerdrMonitor {
         workspaceLabels[agent.workspaceId] ?? agent.workspaceId
     }
 
-    func focus(_ agent: HerdrAgent) async {
-        _ = await run(["agent", "focus", agent.terminalId])
+    /// Switches herdr to the agent and brings the terminal app that shows herdr to the front.
+    func show(_ agent: HerdrAgent) async -> String? {
+        guard let result = await run(["agent", "focus", agent.terminalId]), result.status == 0 else {
+            return "herdr couldn't switch to this agent."
+        }
+        guard let app = await Self.terminalAppShowingHerdr() else {
+            return "herdr isn't open in a terminal window right now."
+        }
+        app.activate(from: .current, options: [])
+        return nil
+    }
+
+    private static func terminalAppShowingHerdr() async -> NSRunningApplication? {
+        let pids = await Shell.run("/usr/bin/pgrep", ["-x", "herdr"]).output.split(separator: "\n").compactMap { pid_t($0) }
+        for pid in pids {
+            var current = pid
+            while let parent = parentPID(of: current), parent > 1 {
+                if let app = NSRunningApplication(processIdentifier: parent), app.bundleURL != nil {
+                    return app
+                }
+                current = parent
+            }
+        }
+        return nil
+    }
+
+    nonisolated private static func parentPID(of pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        return info.kp_eproc.e_ppid
     }
 
     func recentOutput(_ agent: HerdrAgent) async -> String {
@@ -93,19 +146,44 @@ final class HerdrMonitor {
         if let workspaces: WorkspaceListResponse = await decode(["workspace", "list"]) {
             workspaceLabels = Dictionary(uniqueKeysWithValues: workspaces.result.workspaces.map { ($0.workspaceId, $0.label) })
         }
-        notifyNewlyBlocked(response.result.agents)
+        recordTransitions(response.result.agents)
         agents = response.result.agents
     }
 
-    private func notifyNewlyBlocked(_ agents: [HerdrAgent]) {
-        for agent in agents where agent.agentStatus == "blocked" && previousStatus[agent.id] != nil && previousStatus[agent.id] != "blocked" {
-            let content = UNMutableNotificationContent()
-            content.title = "\(agent.kind) needs your input"
-            content.body = "\(agent.folderName) · \(workspaceLabel(agent))"
-            content.sound = .default
-            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: agent.id, content: content, trigger: nil))
+    func dismiss(_ id: AgentEvent.ID) {
+        events.removeAll { $0.id == id }
+    }
+
+    func dismissAll() {
+        events.removeAll()
+    }
+
+    private func recordTransitions(_ agents: [HerdrAgent]) {
+        for agent in agents {
+            guard let previous = previousStatus[agent.id], previous != agent.agentStatus else { continue }
+            let kind: AgentEvent.Kind
+            if agent.agentStatus == "blocked" {
+                kind = .needsInput
+            } else if previous == "working" && (agent.agentStatus == "idle" || agent.agentStatus == "done") {
+                kind = .finished
+            } else {
+                continue
+            }
+            let event = AgentEvent(agent: agent, kind: kind)
+            events.removeAll { $0.agent.id == agent.id }
+            events.append(event)
+            if events.count > 4 { events.removeFirst(events.count - 4) }
+            if !NSApp.isActive { postSystemNotification(for: event) }
         }
         previousStatus = Dictionary(uniqueKeysWithValues: agents.map { ($0.id, $0.agentStatus) })
+    }
+
+    private func postSystemNotification(for event: AgentEvent) {
+        let content = UNMutableNotificationContent()
+        content.title = event.title
+        content.body = "\(event.agent.folderName) · \(workspaceLabel(event.agent))"
+        content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: event.id.uuidString, content: content, trigger: nil))
     }
 
     private func run(_ arguments: [String]) async -> Shell.Result? {

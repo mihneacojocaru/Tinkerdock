@@ -38,6 +38,7 @@ struct ContentView: View {
     @Environment(BrowserSessions.self) private var sessions
     @Environment(DevServerManager.self) private var devServers
     @Environment(AppRouter.self) private var router
+    @Environment(HerdrMonitor.self) private var herdr
 
     @State private var filter: LibraryFilter? = .all
     @State private var selection: Tool.ID?
@@ -74,6 +75,7 @@ struct ContentView: View {
         .navigationSubtitle(subtitle)
         .onChange(of: filter) {
             if case .openTool(let id) = filter { selection = id }
+            if filter == .agents { herdr.dismissAll() }
         }
         .onChange(of: router.openRequest) {
             if let id = router.openRequest?.toolID, let tool = store.tool(id) { open(tool) }
@@ -102,6 +104,11 @@ struct ContentView: View {
                 }
             } else {
                 mainPane
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            if filter != .agents {
+                AgentToasts { filter = .agents }
             }
         }
         .inspector(isPresented: $showInspector) {
