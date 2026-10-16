@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 enum ToolKind: String, Codable, CaseIterable, Identifiable {
     case htmlFile = "html"
@@ -96,6 +97,15 @@ extension Tool {
 
 extension Tool {
     var kindTitle: String { kind.title }
+
+    /// The file type as Finder shows it in its Kind column, in the system language.
+    var fileTypeDescription: String {
+        if kind == .url { return UTType.url.localizedDescription ?? "URL" }
+        guard let fileURL, let description = try? fileURL.resourceValues(forKeys: [.localizedTypeDescriptionKey]).localizedTypeDescription else {
+            return "–"
+        }
+        return description
+    }
     var lastOpenedSortKey: Date { lastOpenedAt ?? .distantPast }
 
     var quickLookURL: URL? {

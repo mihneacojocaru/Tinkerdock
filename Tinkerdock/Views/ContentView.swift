@@ -5,6 +5,34 @@ enum LibraryViewMode: String {
     case grid, list
 }
 
+enum LibrarySortOrder: String, CaseIterable, Identifiable {
+    case name, kind, added, opened
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .name: "Name"
+        case .kind: "Kind"
+        case .added: "Date Added"
+        case .opened: "Last Opened"
+        }
+    }
+
+    func sort(_ tools: [Tool]) -> [Tool] {
+        switch self {
+        case .name: tools.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .kind:
+            tools.sorted {
+                let order = $0.fileTypeDescription.localizedStandardCompare($1.fileTypeDescription)
+                return order == .orderedSame ? $0.name.localizedStandardCompare($1.name) == .orderedAscending : order == .orderedAscending
+            }
+        case .added: tools.sorted { $0.addedAt > $1.addedAt }
+        case .opened: tools.sorted { $0.lastOpenedSortKey > $1.lastOpenedSortKey }
+        }
+    }
+}
+
 struct ContentView: View {
     @Environment(ToolStore.self) private var store
     @Environment(BrowserSessions.self) private var sessions
@@ -22,6 +50,8 @@ struct ContentView: View {
     @AppStorage("viewMode") private var viewMode: LibraryViewMode = .grid
     @AppStorage("showInspector") private var showInspector = true
     @AppStorage("showTerminal") private var showTerminal = false
+    @AppStorage("sortOrder") private var sortOrder: LibrarySortOrder = .name
+    @AppStorage("groupByKind") private var groupByKind = true
 
     private var openedTool: Tool? {
         guard case .openTool(let id) = filter, let tool = store.tool(id), tool.opensInWebView || tool.kind == .devProject else { return nil }
@@ -31,7 +61,7 @@ struct ContentView: View {
     private var visibleTools: [Tool] {
         let filtered = (filter ?? .all).apply(to: store.tools).filter { $0.matches(search) }
         if filter == .recent { return filtered }
-        return filtered.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        return sortOrder.sort(filtered)
     }
 
     var body: some View {
@@ -62,12 +92,16 @@ struct ContentView: View {
     }
 
     private var detail: some View {
-        VSplitView {
-            mainPane
-                .frame(minHeight: 220, maxHeight: .infinity)
+        Group {
             if showTerminal {
-                TerminalPanel(tool: store.tool(selection))
-                    .frame(minHeight: 140, idealHeight: 280)
+                VSplitView {
+                    mainPane
+                        .frame(maxWidth: .infinity, minHeight: 220, maxHeight: .infinity)
+                    TerminalPanel(tool: store.tool(selection))
+                        .frame(maxWidth: .infinity, minHeight: 140, idealHeight: 280)
+                }
+            } else {
+                mainPane
             }
         }
         .inspector(isPresented: $showInspector) {
@@ -114,7 +148,7 @@ struct ContentView: View {
             } else if visibleTools.isEmpty {
                 ContentUnavailableView.search(text: search)
             } else if viewMode == .grid {
-                ToolGridView(tools: visibleTools, selection: $selection, open: open, quickLook: quickLook)
+                ToolGridView(tools: visibleTools, groupByKind: groupByKind, selection: $selection, open: open, quickLook: quickLook)
             } else {
                 ToolListView(tools: visibleTools, selection: $selection, open: open, quickLook: quickLook)
             }
@@ -164,6 +198,19 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .help("Switch between icons and list")
+        }
+        ToolbarItem {
+            Menu {
+                Picker("Sort By", selection: $sortOrder) {
+                    ForEach(LibrarySortOrder.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.inline)
+                Divider()
+                Toggle("Group by Kind", isOn: $groupByKind)
+            } label: {
+                Label("Sort and Group", systemImage: "arrow.up.arrow.down")
+            }
+            .help("Sort and group tools")
         }
         ToolbarItem {
             Button {

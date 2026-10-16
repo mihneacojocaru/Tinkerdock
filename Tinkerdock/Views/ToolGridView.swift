@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ToolGridView: View {
     let tools: [Tool]
+    let groupByKind: Bool
     @Binding var selection: Tool.ID?
     let open: (Tool) -> Void
     let quickLook: (Tool) -> Void
@@ -10,15 +11,22 @@ struct ToolGridView: View {
 
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 24) {
-                ForEach(tools) { tool in
-                    ToolTile(tool: tool, isSelected: selection == tool.id)
-                        .onTapGesture(count: 2) { open(tool) }
-                        .simultaneousGesture(TapGesture().onEnded { selection = tool.id })
-                        .contextMenu { ToolMenuItems(tool: tool, open: open) }
+            LazyVGrid(columns: columns, spacing: 24, pinnedViews: [.sectionHeaders]) {
+                if groupByKind {
+                    ForEach(groups, id: \.title) { group in
+                        Section {
+                            ForEach(group.tools, content: tile)
+                        } header: {
+                            header(group.title, count: group.tools.count)
+                        }
+                    }
+                } else {
+                    ForEach(tools, content: tile)
                 }
             }
-            .padding(20)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+            .padding(.top, groupByKind ? 0 : 20)
         }
         .contentShape(Rectangle())
         .onTapGesture { selection = nil }
@@ -34,6 +42,33 @@ struct ToolGridView: View {
             open(tool)
             return .handled
         }
+    }
+}
+
+extension ToolGridView {
+    private func tile(_ tool: Tool) -> some View {
+        ToolTile(tool: tool, isSelected: selection == tool.id)
+            .onTapGesture(count: 2) { open(tool) }
+            .simultaneousGesture(TapGesture().onEnded { selection = tool.id })
+            .contextMenu { ToolMenuItems(tool: tool, open: open) }
+    }
+
+    private var groups: [(title: String, tools: [Tool])] {
+        Dictionary(grouping: tools, by: \.fileTypeDescription)
+            .map { (title: $0.key, tools: $0.value) }
+            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    private func header(_ title: String, count: Int) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.headline)
+            Text("\(count)")
+                .foregroundStyle(.secondary)
+            Spacer()
+        }
+        .padding(.vertical, 10)
+        .background(.background)
     }
 }
 
