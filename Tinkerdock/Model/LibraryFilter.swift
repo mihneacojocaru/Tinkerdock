@@ -6,6 +6,7 @@ enum LibraryFilter: Hashable {
     case recent
     case missing
     case kind(ToolKind)
+    case openTool(Tool.ID)
 
     var title: String {
         switch self {
@@ -14,6 +15,7 @@ enum LibraryFilter: Hashable {
         case .recent: "Recently Opened"
         case .missing: "Not Found"
         case .kind(let kind): kind.title
+        case .openTool: "Tool"
         }
     }
 
@@ -24,6 +26,7 @@ enum LibraryFilter: Hashable {
         case .recent: "clock"
         case .missing: "exclamationmark.triangle"
         case .kind(let kind): kind.symbol
+        case .openTool: "macwindow"
         }
     }
 
@@ -36,6 +39,7 @@ enum LibraryFilter: Hashable {
                 .sorted { ($0.lastOpenedAt ?? .distantPast) > ($1.lastOpenedAt ?? .distantPast) }
         case .missing: tools.filter(\.isMissing)
         case .kind(let kind): tools.filter { $0.kind == kind }
+        case .openTool(let id): tools.filter { $0.id == id }
         }
     }
 }

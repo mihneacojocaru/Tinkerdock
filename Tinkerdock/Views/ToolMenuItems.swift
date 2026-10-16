@@ -6,10 +6,13 @@ struct ToolMenuItems: View {
 
     @Environment(ToolStore.self) private var store
     @Environment(ThumbnailStore.self) private var thumbnails
+    @Environment(BrowserSessions.self) private var sessions
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("Open") { open(tool) }
         if tool.opensInWebView {
+            Button("Open in New Window") { openWindow(id: "tool", value: tool.id) }
             Button("Open in Browser") { ToolActions.openInBrowser(tool) }
         }
         if tool.fileURL != nil {
@@ -27,6 +30,7 @@ struct ToolMenuItems: View {
         }
         Divider()
         Button("Remove from Tinkerdock", role: .destructive) {
+            sessions.close(tool.id)
             store.remove([tool.id])
         }
     }

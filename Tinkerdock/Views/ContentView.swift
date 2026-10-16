@@ -8,7 +8,7 @@ enum LibraryViewMode: String {
 struct ContentView: View {
     @Environment(ToolStore.self) private var store
     @Environment(TerminalManager.self) private var terminals
-    @Environment(\.openWindow) private var openWindow
+    @Environment(BrowserSessions.self) private var sessions
 
     @State private var filter: LibraryFilter? = .all
     @State private var selection: Tool.ID?
@@ -22,6 +22,11 @@ struct ContentView: View {
     @AppStorage("showInspector") private var showInspector = true
     @AppStorage("showTerminal") private var showTerminal = false
 
+    private var openedTool: Tool? {
+        guard case .openTool(let id) = filter, let tool = store.tool(id), tool.entryURL != nil else { return nil }
+        return tool
+    }
+
     private var visibleTools: [Tool] {
         let filtered = (filter ?? .all).apply(to: store.tools).filter { $0.matches(search) }
         if filter == .recent { return filtered }
@@ -34,8 +39,11 @@ struct ContentView: View {
         } detail: {
             detail
         }
-        .navigationTitle((filter ?? .all).title)
+        .navigationTitle(openedTool?.name ?? (filter ?? .all).title)
         .navigationSubtitle(subtitle)
+        .onChange(of: filter) {
+            if case .openTool(let id) = filter { selection = id }
+        }
         .searchable(text: $search, placement: .toolbar, prompt: "Search tools")
         .toolbar { toolbar }
         .quickLookPreview($quickLookURL)
@@ -51,7 +59,7 @@ struct ContentView: View {
 
     private var detail: some View {
         VSplitView {
-            library
+            mainPane
                 .frame(minHeight: 220, maxHeight: .infinity)
             if showTerminal {
                 TerminalPanel(tool: store.tool(selection))
@@ -64,7 +72,18 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
+    private var mainPane: some View {
+        if let tool = openedTool {
+            ToolBrowserView(tool: tool, browser: sessions.model(for: tool), showsWindowButton: true)
+                .id(tool.id)
+        } else {
+            library
+        }
+    }
+
     private var subtitle: String {
+        if let tool = openedTool { return tool.displayLocation }
         let count = visibleTools.count
         return count == 1 ? "1 tool" : "\(count) tools"
     }
@@ -130,7 +149,7 @@ struct ContentView: View {
             .help("Add a tool. Click and hold for more options.")
         }
         ToolbarItem {
-            Picker("View", selection: $viewMode) {
+            Picker("View", selection: libraryViewMode) {
                 Label("Icons", systemImage: "square.grid.2x2").tag(LibraryViewMode.grid)
                 Label("List", systemImage: "list.bullet").tag(LibraryViewMode.list)
             }
@@ -167,7 +186,8 @@ struct ContentView: View {
         store.markOpened(tool.id)
         switch tool.kind {
         case .htmlFile, .staticFolder, .url:
-            openWindow(id: "tool", value: tool.id)
+            sessions.open(tool)
+            filter = .openTool(tool.id)
         case .app:
             ToolActions.launchApp(tool)
         case .script:
@@ -176,6 +196,17 @@ struct ContentView: View {
             showTerminal = true
             terminals.run(tool.command ?? "npm run dev", in: tool)
         }
+    }
+
+    // Picking a view mode while a tool is shown returns to the library.
+    private var libraryViewMode: Binding<LibraryViewMode> {
+        Binding(
+            get: { viewMode },
+            set: { mode in
+                viewMode = mode
+                if openedTool != nil { filter = .all }
+            }
+        )
     }
 
     private func quickLook(_ tool: Tool) {
