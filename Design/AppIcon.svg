@@ -1,0 +1,23 @@
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" role="img" aria-label="Tinkerdock Icon: drei Werkzeugblöcke auf einem Steg über Wasser">
+<defs>
+<linearGradient id="tdA-ground" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#2A4058"></stop>
+<stop offset="1" stop-color="#14212F"></stop>
+</linearGradient>
+<clipPath id="tdA-clip"><rect x="100" y="100" width="824" height="824" rx="186"></rect></clipPath>
+</defs>
+<rect x="100" y="100" width="824" height="824" rx="186" fill="url(#tdA-ground)"></rect>
+<g clip-path="url(#tdA-clip)">
+<rect x="100" y="640" width="824" height="284" fill="#173A55"></rect>
+<rect x="268" y="600" width="46" height="190" rx="10" fill="#7A5C40"></rect>
+<rect x="489" y="600" width="46" height="190" rx="10" fill="#7A5C40"></rect>
+<rect x="710" y="600" width="46" height="190" rx="10" fill="#7A5C40"></rect>
+<path d="M150 720 q 45 -26 90 0 t 90 0 t 90 0 t 90 0 t 90 0 t 90 0 t 90 0 t 90 0" fill="none" stroke="#5DB3E6" stroke-width="20" stroke-linecap="round" opacity="0.85"></path>
+<path d="M195 800 q 45 -26 90 0 t 90 0 t 90 0 t 90 0 t 90 0 t 90 0 t 90 0" fill="none" stroke="#5DB3E6" stroke-width="20" stroke-linecap="round" opacity="0.5"></path>
+</g>
+<rect x="200" y="572" width="624" height="52" rx="16" fill="#D39A5E"></rect>
+<rect x="250" y="388" width="172" height="184" rx="30" fill="#F2B544"></rect>
+<rect x="442" y="318" width="150" height="254" rx="30" fill="#EF6F5E"></rect>
+<rect x="612" y="424" width="162" height="148" rx="30" fill="#5CC8A8"></rect>
+<rect x="100" y="100" width="824" height="824" rx="186" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="4"></rect>
+</svg>
