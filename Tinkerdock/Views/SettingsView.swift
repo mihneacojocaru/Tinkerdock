@@ -5,6 +5,8 @@ struct SettingsView: View {
         TabView {
             FoldersSettings()
                 .tabItem { Label("Folders", systemImage: "folder") }
+            BrowsingSettings()
+                .tabItem { Label("Browsing", systemImage: "safari") }
             IntegrationSettings()
                 .tabItem { Label("Integrations", systemImage: "puzzlepiece.extension") }
         }
@@ -100,5 +102,21 @@ private struct IntegrationSettings: View {
         }
         commandInstalled = Installer.isCommandInstalled
         skillInstalled = Installer.isSkillInstalled
+    }
+}
+
+private struct BrowsingSettings: View {
+    @AppStorage(ContentBlocker.settingKey) private var blockAds = true
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Block ads and trackers", isOn: $blockAds)
+            } footer: {
+                Text("Blocks common ad networks and hides ad slots, for example on Kleinanzeigen. Applies to pages you open after changing it.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }

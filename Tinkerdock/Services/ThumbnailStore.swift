@@ -104,10 +104,13 @@ private final class SnapshotRenderer: NSObject, WKNavigationDelegate {
         self.completion = completion
         self.settle = settle
         window.orderBack(nil)
-        if url.isFileURL {
-            webView.loadFileURL(url, allowingReadAccessTo: readAccess ?? url.deletingLastPathComponent())
-        } else {
-            webView.load(URLRequest(url: url))
+        Task { [webView] in
+            await ContentBlocker.install(on: webView)
+            if url.isFileURL {
+                webView.loadFileURL(url, allowingReadAccessTo: readAccess ?? url.deletingLastPathComponent())
+            } else {
+                webView.load(URLRequest(url: url))
+            }
         }
         Task {
             try? await Task.sleep(for: .seconds(20))

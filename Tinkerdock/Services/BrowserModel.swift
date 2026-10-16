@@ -10,6 +10,7 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     private(set) var loadedURL: URL?
+    private var setup: Task<Void, Never>?
 
     override init() {
         webView = WKWebView(frame: .zero, configuration: WKWebViewConfiguration())
@@ -17,15 +18,20 @@ final class BrowserModel: NSObject, ObservableObject, WKNavigationDelegate, WKUI
         webView.isInspectable = true
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        setup = Task { [webView] in await ContentBlocker.install(on: webView) }
     }
 
     func load(_ url: URL, readAccess: URL? = nil) {
         loadedURL = url
         errorMessage = nil
-        if url.isFileURL {
-            webView.loadFileURL(url, allowingReadAccessTo: readAccess ?? url.deletingLastPathComponent())
-        } else {
-            webView.load(URLRequest(url: url))
+        Task {
+            await setup?.value
+            guard loadedURL == url else { return }
+            if url.isFileURL {
+                webView.loadFileURL(url, allowingReadAccessTo: readAccess ?? url.deletingLastPathComponent())
+            } else {
+                webView.load(URLRequest(url: url))
+            }
         }
     }
 
