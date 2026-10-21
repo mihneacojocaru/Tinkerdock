@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TinkerdockApp: App {
     @State private var services = AppServices()
+    @AppStorage("showMenuBarIcon") private var showMenuBarIcon = false
 
     var body: some Scene {
         Window("Tinkerdock", id: "library") {
@@ -17,7 +18,7 @@ struct TinkerdockApp: App {
         }
         .defaultSize(width: 1200, height: 820)
 
-        MenuBarExtra("Tinkerdock", systemImage: "shippingbox") {
+        MenuBarExtra("Tinkerdock", systemImage: "shippingbox", isInserted: $showMenuBarIcon) {
             MenuBarContent()
                 .environment(services)
         }

@@ -8,6 +8,7 @@ final class AppServices {
     let devServers = DevServerManager()
     let router = AppRouter()
     let herdr = HerdrMonitor()
+    let servers: ServerMonitor
     let thumbnails: ThumbnailStore
     let sessions: BrowserSessions
     let discovery: DiscoveryStore
@@ -15,6 +16,7 @@ final class AppServices {
 
     init() {
         thumbnails = ThumbnailStore(server: server)
+        servers = ServerMonitor(devServers: devServers)
         sessions = BrowserSessions(server: server, devServers: devServers)
         discovery = DiscoveryStore(store: store)
         inbox = InboxWatcher(store: store, router: router)
@@ -37,5 +39,6 @@ extension View {
             .environment(services.sessions)
             .environment(services.discovery)
             .environment(services.herdr)
+            .environment(services.servers)
     }
 }

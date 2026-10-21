@@ -3,6 +3,8 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
+            GeneralSettings()
+                .tabItem { Label("General", systemImage: "gearshape") }
             FoldersSettings()
                 .tabItem { Label("Folders", systemImage: "folder") }
             BrowsingSettings()
@@ -11,6 +13,22 @@ struct SettingsView: View {
                 .tabItem { Label("Integrations", systemImage: "puzzlepiece.extension") }
         }
         .frame(width: 560, height: 380)
+    }
+}
+
+private struct GeneralSettings: View {
+    @AppStorage("showMenuBarIcon") private var showMenuBarIcon = false
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Show Tinkerdock in the menu bar", isOn: $showMenuBarIcon)
+            } footer: {
+                Text("Adds a menu bar icon with quick access to your tools.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 

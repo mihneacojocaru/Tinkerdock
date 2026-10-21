@@ -6,6 +6,7 @@ struct SidebarView: View {
     @Environment(DiscoveryStore.self) private var discovery
     @Environment(DevServerManager.self) private var devServers
     @Environment(HerdrMonitor.self) private var herdr
+    @Environment(ServerMonitor.self) private var servers
     @Binding var selection: LibraryFilter?
 
     var body: some View {
@@ -26,6 +27,10 @@ struct SidebarView: View {
                         .tag(LibraryFilter.agents)
                         .help("Agents in herdr. The number counts agents waiting for you.")
                 }
+                Label(LibraryFilter.servers.title, systemImage: LibraryFilter.servers.symbol)
+                    .badge(servers.devServerCount)
+                    .tag(LibraryFilter.servers)
+                    .help("Local servers and their ports. The number counts dev servers and running DDEV projects.")
             }
             if !sessions.openIDs.isEmpty {
                 Section("Open") {

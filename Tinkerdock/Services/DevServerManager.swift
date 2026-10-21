@@ -40,6 +40,10 @@ final class DevServerManager {
         return nil
     }
 
+    var processIDs: [Tool.ID: pid_t] {
+        processes.mapValues(\.processIdentifier)
+    }
+
     func isActive(_ id: Tool.ID) -> Bool {
         processes[id] != nil
     }

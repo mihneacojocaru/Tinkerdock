@@ -6,12 +6,13 @@ enum Shell {
         var output: String
     }
 
-    static func run(_ executable: String, _ arguments: [String], in directory: URL? = nil) async -> Result {
+    static func run(_ executable: String, _ arguments: [String], in directory: URL? = nil, environment: [String: String]? = nil) async -> Result {
         await Task.detached {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: executable)
             process.arguments = arguments
             process.currentDirectoryURL = directory
+            if let environment { process.environment = environment }
             let pipe = Pipe()
             process.standardOutput = pipe
             process.standardError = pipe
